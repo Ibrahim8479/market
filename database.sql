@@ -61,10 +61,10 @@ CREATE TABLE IF NOT EXISTS messages (
 -- Mot de passe: admin123
 INSERT INTO users (name, email, phone, password, role, balance) 
 VALUES (
-    'Ibrahim',
-    'ibrahim80@gmail.com',
-    '+227 80104091',
-    '$2y$10$e0NR6Fz5j1YhZ1ZQ9x8ueOa8Fz5j1YhZ1ZQ9x8ueOa8Fz5j1YhZ1ZQ9x8ueOa', -- mot de passe hashé pour 'admin123'
+    'Administrateur',
+    'admin@marketplace.com',
+    '+227 00000000',
+    '$2y$10$7pnuy.5CMe5Z/w.dm67kW.QJ.L3QFzh2n0qh/DlpinOwxtFWfNrk.', -- mot de passe hashé pour 'admin123'
     'admin',
     0.00
 ) ON DUPLICATE KEY UPDATE id=id;

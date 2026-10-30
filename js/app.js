@@ -6,6 +6,16 @@ let currentUser = null;
 let products = [];
 let selectedProduct = null;
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
+}
+
 // Système de notifications professionnelles
 function showToast(message, type = 'success', title = '') {
     const container = document.getElementById('toastContainer') || createToastContainer();
@@ -30,8 +40,8 @@ function showToast(message, type = 'success', title = '') {
     toast.innerHTML = `
         <div class="toast-icon">${icons[type]}</div>
         <div class="toast-content">
-            <div class="toast-title">${titles[type]}</div>
-            <div class="toast-message">${message}</div>
+            <div class="toast-title">${escapeHtml(titles[type])}</div>
+            <div class="toast-message">${escapeHtml(message)}</div>
         </div>
         <button class="toast-close" onclick="closeToast(this)">×</button>
     `;
@@ -130,10 +140,14 @@ function setButtonLoading(button, loading) {
 }
 
 // Initialisation
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
-    loadProducts();
+document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
+    await Promise.all([checkAuth(), loadProducts()]);
+
+    const productId = Number(new URLSearchParams(window.location.search).get('product'));
+    if (Number.isInteger(productId) && productId > 0) {
+        showProductDetail(productId);
+    }
 });
 
 // Vérifier l'authentification
@@ -163,6 +177,9 @@ function updateUI() {
             <button class="btn btn-primary" onclick="openModal('publishModal')">
                 <i class="fas fa-plus"></i> Publier
             </button>
+            <button class="btn btn-secondary" onclick="openMessages()">
+                <i class="fas fa-envelope"></i> Messages
+            </button>
             ${currentUser.role === 'admin' ? `
                 <button class="btn btn-secondary" onclick="window.location.href='admin.php'">
                     <i class="fas fa-cog"></i> Admin
@@ -171,10 +188,11 @@ function updateUI() {
             <div class="header-divider"></div>
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
-                <span>${currentUser.name}</span>
+                <span>${escapeHtml(currentUser.name)}</span>
             </div>
             <button class="btn btn-danger" onclick="logout()" title="Déconnexion">
                 <i class="fas fa-sign-out-alt"></i>
+                <span>Déconnexion</span>
             </button>
         `;
     } else {
@@ -193,14 +211,23 @@ function updateUI() {
 async function loadProducts() {
     try {
         const response = await fetch(API_URL + 'products.php?action=list');
-        const data = await response.json();
-        
-        if (data.success) {
-            products = data.products;
-            displayProducts();
+        if (!response.ok) {
+            throw new Error(`Products request failed with status ${response.status}`);
         }
+        const data = await response.json();
+
+        if (!data.success || !Array.isArray(data.products)) {
+            throw new Error(data.message || 'Invalid products response');
+        }
+
+        products = data.products;
+        displayProducts();
     } catch (error) {
         console.error('Erreur chargement produits:', error);
+        document.getElementById('productsGrid').style.display = 'none';
+        document.getElementById('noProducts').style.display = 'flex';
+        document.getElementById('noProductsText').textContent =
+            'Les annonces ne peuvent pas être chargées pour le moment.';
     }
 }
 
@@ -238,15 +265,20 @@ function displayProducts() {
         if (filtered.length > 0) {
             statsText.innerHTML = `<strong>${filtered.length}</strong> produit${filtered.length > 1 ? 's' : ''} trouvé${filtered.length > 1 ? 's' : ''}`;
         } else {
-            statsText.innerHTML = 'Aucun produit ne correspond à votre recherche';
+            statsText.textContent = 'Aucun produit ne correspond à votre recherche';
         }
     } else {
         searchStats.style.display = 'none';
     }
     
     if (filtered.length === 0) {
+        grid.innerHTML = '';
         grid.style.display = 'none';
         noProducts.style.display = 'flex';
+        const isEmptyCatalog = products.length === 0;
+        document.getElementById('noProductsText').textContent = isEmptyCatalog
+            ? 'Aucune annonce pour le moment. Soyez le premier à publier !'
+            : 'Aucun produit ne correspond à votre recherche.';
         return;
     }
     
@@ -257,10 +289,10 @@ function displayProducts() {
         let mediaHtml = '<i class="fas fa-image"></i>';
         
         if (product.images && product.images.length > 0) {
-            mediaHtml = `<img src="uploads/${product.images[0]}" alt="${product.title}">`;
+            mediaHtml = `<img src="uploads/${escapeHtml(product.images[0])}" alt="${escapeHtml(product.title)}">`;
         } else if (product.videos && product.videos.length > 0) {
             mediaHtml = `
-                <video src="uploads/${product.videos[0]}" muted loop autoplay>
+                <video src="uploads/${escapeHtml(product.videos[0])}" muted loop autoplay>
                     <i class="fas fa-video"></i>
                 </video>
             `;
@@ -270,17 +302,17 @@ function displayProducts() {
         const categoryEmoji = getCategoryEmoji(product.category);
         
         return `
-            <div class="product-card" onclick="showProductDetail(${product.id})">
+            <div class="product-card" onclick="showProductDetail(${Number(product.id)})">
                 <div class="product-image">
                     ${mediaHtml}
                     ${product.videos && product.videos.length > 0 ? '<div class="video-badge"><i class="fas fa-play-circle"></i></div>' : ''}
                 </div>
                 <div class="product-info">
-                    <h3 class="product-title">${product.title}</h3>
-                    <p class="product-description">${product.description}</p>
+                    <h3 class="product-title">${escapeHtml(product.title)}</h3>
+                    <p class="product-description">${escapeHtml(product.description)}</p>
                     <div class="product-footer">
                         <span class="product-price">${formatPrice(product.price)}</span>
-                        <span class="product-category">${categoryEmoji} ${getCategoryName(product.category)}</span>
+                        <span class="product-category">${categoryEmoji} ${escapeHtml(getCategoryName(product.category))}</span>
                     </div>
                 </div>
             </div>
@@ -303,7 +335,9 @@ function getCategoryEmoji(category) {
         'evenements': '🎉', 'appartements': '🏢', 'maisons': '🏠', 'terrains': '🌍',
         'bureaux': '🏢', 'chiens-chats': '🐕', 'autres-animaux': '🐦',
         'accessoires-animaux': '🦴', 'alimentation': '🍔', 'bebe-puericulture': '👶',
-        'sante': '⚕️', 'autres': '📦'
+        'sante': '⚕️', 'autres': '📦', 'electronics': '📱',
+        'fashion': '👕', 'home': '🏠', 'vehicles': '🚗',
+        'services': '💼', 'other': '📦'
     };
     return emojis[category] || '📦';
 }
@@ -326,7 +360,9 @@ function getCategoryName(category) {
         'maisons': 'Maisons', 'terrains': 'Terrains', 'bureaux': 'Bureaux',
         'chiens-chats': 'Animaux', 'autres-animaux': 'Animaux', 
         'accessoires-animaux': 'Accessoires Animaux', 'alimentation': 'Alimentation',
-        'bebe-puericulture': 'Bébé', 'sante': 'Santé', 'autres': 'Autres'
+        'bebe-puericulture': 'Bébé', 'sante': 'Santé', 'autres': 'Autres',
+        'electronics': 'Électronique', 'fashion': 'Mode', 'home': 'Maison',
+        'vehicles': 'Véhicules', 'services': 'Services', 'other': 'Autre'
     };
     return names[category] || 'Autre';
 }
@@ -344,6 +380,9 @@ function formatPrice(price) {
 async function showProductDetail(productId) {
     try {
         const response = await fetch(API_URL + `products.php?action=get&id=${productId}`);
+        if (!response.ok) {
+            throw new Error(`Product request failed with status ${response.status}`);
+        }
         const data = await response.json();
         
         if (data.success) {
@@ -356,7 +395,7 @@ async function showProductDetail(productId) {
             if (selectedProduct.images && selectedProduct.images.length > 0) {
                 mediaGallery += '<div class="media-gallery">';
                 selectedProduct.images.forEach(img => {
-                    mediaGallery += `<img src="uploads/${img}" alt="${selectedProduct.title}" class="gallery-item">`;
+                    mediaGallery += `<img src="uploads/${escapeHtml(img)}" alt="${escapeHtml(selectedProduct.title)}" class="gallery-item">`;
                 });
                 mediaGallery += '</div>';
             }
@@ -366,7 +405,7 @@ async function showProductDetail(productId) {
                 selectedProduct.videos.forEach(video => {
                     mediaGallery += `
                         <video controls class="gallery-item">
-                            <source src="uploads/${video}" type="video/mp4">
+                            <source src="uploads/${escapeHtml(video)}">
                             Votre navigateur ne supporte pas la vidéo.
                         </video>
                     `;
@@ -384,27 +423,27 @@ async function showProductDetail(productId) {
                     
                     <div class="detail-header">
                         <div class="detail-title">
-                            <h1>${selectedProduct.title}</h1>
-                            <span class="product-category">${selectedProduct.category}</span>
+                            <h1>${escapeHtml(selectedProduct.title)}</h1>
+                            <span class="product-category">${escapeHtml(getCategoryName(selectedProduct.category))}</span>
                         </div>
                         <div class="detail-price">${formatPrice(selectedProduct.price)}</div>
                     </div>
                     
                     <div class="detail-section">
                         <h2>Description</h2>
-                        <p>${selectedProduct.description}</p>
+                        <p>${escapeHtml(selectedProduct.description)}</p>
                     </div>
                     
                     <div class="detail-section">
                         <h2>Informations du vendeur</h2>
                         <div class="seller-info">
-                            <p><i class="fas fa-user"></i> <strong>Nom:</strong> ${selectedProduct.seller_name}</p>
-                            <p><i class="fas fa-phone"></i> <strong>Téléphone:</strong> ${selectedProduct.phone}</p>
-                            <p><i class="fas fa-envelope"></i> <strong>Email:</strong> ${selectedProduct.email}</p>
+                            <p><i class="fas fa-user"></i> <strong>Nom :</strong> ${escapeHtml(selectedProduct.seller_name)}</p>
+                            <p><i class="fas fa-phone"></i> <strong>Téléphone :</strong> ${escapeHtml(selectedProduct.phone)}</p>
+                            <p><i class="fas fa-envelope"></i> <strong>Email :</strong> ${escapeHtml(selectedProduct.email)}</p>
                         </div>
                     </div>
                     
-                    ${currentUser && currentUser.id !== selectedProduct.seller_id ? `
+                    ${currentUser && Number(currentUser.id) !== Number(selectedProduct.seller_id) ? `
                         <div class="detail-section">
                             <h2>Contacter le vendeur</h2>
                             <div class="message-form">
@@ -418,7 +457,7 @@ async function showProductDetail(productId) {
                     
                     ${currentUser && currentUser.role === 'admin' ? `
                         <div class="detail-section">
-                            <button class="btn btn-danger" onclick="deleteProduct(${selectedProduct.id})">
+                            <button class="btn btn-danger" onclick="deleteProduct(${Number(selectedProduct.id)})">
                                 <i class="fas fa-trash"></i> Supprimer ce produit
                             </button>
                         </div>
@@ -427,9 +466,12 @@ async function showProductDetail(productId) {
             `;
             
             openModal('detailModal');
+        } else {
+            showToast(data.message || 'Produit introuvable', 'error');
         }
     } catch (error) {
         console.error('Erreur détail produit:', error);
+        showToast('Impossible de charger cette annonce pour le moment', 'error');
     }
 }
 
@@ -545,7 +587,8 @@ function setupEventListeners() {
         showConfirm(
             `Le produit sera publié avec les frais suivants :<br><br>
             <strong>Prix du produit :</strong> ${formatPrice(price)}<br>
-            <strong>Frais de publication :</strong> ${formatPrice(fee)}<br><br>
+            <strong>Frais indicatifs :</strong> ${formatPrice(fee)}<br>
+            <small>Aucun paiement en ligne n’est actuellement connecté.</small><br><br>
             Voulez-vous confirmer la publication ?`,
             async () => {
                 const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -643,6 +686,94 @@ function setupEventListeners() {
     });
 }
 
+async function openMessages() {
+    if (!currentUser) {
+        openModal('loginModal');
+        return;
+    }
+
+    const list = document.getElementById('messagesList');
+    openModal('messagesModal');
+    list.innerHTML = '<p class="messages-empty">Chargement de vos messages...</p>';
+
+    try {
+        const response = await fetch(API_URL + 'messages.php?action=list');
+        if (!response.ok) {
+            throw new Error(`Messages request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.messages)) {
+            throw new Error(data.message || 'Invalid messages response');
+        }
+
+        if (data.messages.length === 0) {
+            list.innerHTML = '<p class="messages-empty">Vous n’avez pas encore de message.</p>';
+            return;
+        }
+
+        list.innerHTML = data.messages.map((message) => {
+            const isSent = Number(message.sender_id) === Number(currentUser.id);
+            const otherUserId = Number(isSent ? message.receiver_id : message.sender_id);
+            const otherName = isSent ? message.receiver_name : message.sender_name;
+            const messageId = Number(message.id);
+            const productId = Number(message.product_id);
+
+            return `
+                <article class="message-card">
+                    <div class="message-card-header">
+                        <strong>${escapeHtml(otherName)}</strong>
+                        <time>${escapeHtml(message.created_at)}</time>
+                    </div>
+                    <p class="message-product">${escapeHtml(message.product_title)}</p>
+                    <p class="message-content">${escapeHtml(message.content)}</p>
+                    <div class="message-reply">
+                        <textarea id="messageReply${messageId}" rows="2" maxlength="5000"
+                            placeholder="Écrire une réponse..." aria-label="Répondre à ${escapeHtml(otherName)}"></textarea>
+                        <button class="btn btn-primary" type="button"
+                            onclick="replyToMessage(${productId}, ${otherUserId}, ${messageId})">
+                            <i class="fas fa-paper-plane"></i> Répondre
+                        </button>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Erreur chargement des messages:', error);
+        list.innerHTML = '<p class="messages-empty">Impossible de charger vos messages. Réessayez plus tard.</p>';
+    }
+}
+
+async function replyToMessage(productId, receiverId, messageId) {
+    const input = document.getElementById(`messageReply${messageId}`);
+    const content = input.value.trim();
+    if (!content) {
+        showToast('Écrivez un message avant de l’envoyer', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'send');
+    formData.append('product_id', productId);
+    formData.append('receiver_id', receiverId);
+    formData.append('content', content);
+
+    try {
+        const response = await fetch(API_URL + 'messages.php', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            showToast(data.message || 'Impossible d’envoyer le message', 'error');
+            return;
+        }
+
+        showToast('Réponse envoyée', 'success');
+        await openMessages();
+    } catch (error) {
+        console.error('Erreur envoi de la réponse:', error);
+        showToast('Erreur de connexion au serveur', 'error');
+    }
+}
+
 // Calculer les frais de publication (en FCFA)
 // Formule : 
 // - Prix < 5,000 FCFA : 150 FCFA
@@ -690,11 +821,11 @@ async function sendMessage() {
         
         const data = await response.json();
         
-        if (data.success) {
+        if (response.ok && data.success) {
             showToast('Message envoyé avec succès au vendeur', 'success');
             document.getElementById('messageContent').value = '';
         } else {
-            showToast('Erreur lors de l\'envoi du message', 'error');
+            showToast(data.message || 'Erreur lors de l’envoi du message', 'error');
         }
     } catch (error) {
         console.error('Erreur message:', error);
@@ -775,7 +906,18 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        return;
+    }
+
+    modal.style.display = 'none';
+
+    if (modalId === 'detailModal' && new URLSearchParams(window.location.search).has('product')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('product');
+        window.history.replaceState({}, '', url);
+    }
 }
 
 function switchModal(closeId, openId) {

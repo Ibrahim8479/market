@@ -23,7 +23,7 @@ switch($action) {
 
 function checkAuth() {
     $user = getCurrentUser();
-    
+
     if ($user) {
         unset($user['password']);
         jsonResponse([
@@ -40,22 +40,23 @@ function checkAuth() {
 
 function login() {
     global $pdo;
-    
-    $email = secure($_POST['email'] ?? '');
+
+    $email = strtolower(trim($_POST['email'] ?? ''));
     $password = $_POST['password'] ?? '';
-    
-    if (empty($email) || empty($password)) {
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
         jsonResponse(['success' => false, 'message' => 'Email et mot de passe requis']);
     }
-    
+
     $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
-    
+
     if ($user && password_verify($password, $user['password'])) {
+        session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
         unset($user['password']);
-        
+
         jsonResponse([
             'success' => true,
             'message' => 'Connexion réussie',
@@ -71,56 +72,59 @@ function login() {
 
 function signup() {
     global $pdo;
-    
-    $name = secure($_POST['name'] ?? '');
-    $email = secure($_POST['email'] ?? '');
-    $phone = secure($_POST['phone'] ?? '');
+
+    $name = trim(strip_tags($_POST['name'] ?? ''));
+    $email = strtolower(trim($_POST['email'] ?? ''));
+    $phone = trim(strip_tags($_POST['phone'] ?? ''));
     $password = $_POST['password'] ?? '';
-    
-    if (empty($name) || empty($email) || empty($phone) || empty($password)) {
-        jsonResponse(['success' => false, 'message' => 'Tous les champs sont requis']);
+
+    if ($name === '' || strlen($name) > 255 || !filter_var($email, FILTER_VALIDATE_EMAIL)
+        || $phone === '' || strlen($phone) > 50 || strlen($password) < 8) {
+        jsonResponse([
+            'success' => false,
+            'message' => 'Vérifiez les informations saisies. Le mot de passe doit contenir au moins 8 caractères.'
+        ]);
     }
-    
-    // Vérifier si l'email existe déjà
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-    
-    if ($stmt->fetch()) {
-        jsonResponse(['success' => false, 'message' => 'Email déjà utilisé']);
-    }
-    
-    // Créer l'utilisateur
+
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-    
+
     $stmt = $pdo->prepare("
         INSERT INTO users (name, email, phone, password, role, balance, created_at) 
         VALUES (?, ?, ?, ?, 'user', 0, NOW())
     ");
-    
-    if ($stmt->execute([$name, $email, $phone, $hashedPassword])) {
-        $userId = $pdo->lastInsertId();
-        $_SESSION['user_id'] = $userId;
-        
-        $user = [
+
+    try {
+        $stmt->execute([$name, $email, $phone, $hashedPassword]);
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            jsonResponse(['success' => false, 'message' => 'Email déjà utilisé']);
+        }
+
+        error_log('Account creation failed: ' . $e->getMessage());
+        http_response_code(500);
+        jsonResponse(['success' => false, 'message' => 'Erreur lors de l’inscription']);
+    }
+
+    $userId = $pdo->lastInsertId();
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = $userId;
+
+    jsonResponse([
+        'success' => true,
+        'message' => 'Inscription réussie',
+        'user' => [
             'id' => $userId,
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
             'role' => 'user',
             'balance' => 0
-        ];
-        
-        jsonResponse([
-            'success' => true,
-            'message' => 'Inscription réussie',
-            'user' => $user
-        ]);
-    } else {
-        jsonResponse(['success' => false, 'message' => 'Erreur lors de l\'inscription']);
-    }
+        ]
+    ]);
 }
 
 function logout() {
+    $_SESSION = [];
     session_destroy();
     jsonResponse(['success' => true, 'message' => 'Déconnexion réussie']);
 }

@@ -15,7 +15,7 @@ $totalProducts = $stmt->fetch()['total'];
 $stmt = $pdo->query("SELECT COUNT(*) as total FROM users WHERE role = 'user'");
 $totalUsers = $stmt->fetch()['total'];
 
-$stmt = $pdo->query("SELECT balance FROM users WHERE role = 'admin'");
+$stmt = $pdo->query("SELECT COALESCE(SUM(balance), 0) as balance FROM users WHERE role = 'admin'");
 $adminBalance = $stmt->fetch()['balance'];
 
 // Liste des produits
@@ -33,7 +33,7 @@ $allProducts = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - MarketPlace</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -54,6 +54,7 @@ $allProducts = $stmt->fetchAll();
                     </div>
                     <button class="btn btn-danger" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i>
+                        <span>Déconnexion</span>
                     </button>
                 </nav>
             </div>
@@ -68,7 +69,7 @@ $allProducts = $stmt->fetchAll();
 
             <div class="admin-stats">
                 <div class="stat-card">
-                    <h3>Revenus totaux</h3>
+                    <h3>Solde administratif</h3>
                     <p><?php echo number_format($adminBalance, 0, ',', ' '); ?> FCFA</p>
                 </div>
                 <div class="stat-card secondary">

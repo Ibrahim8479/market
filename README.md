@@ -1,6 +1,6 @@
 # 🛍️ MarketPlace Niger - Plateforme de Vente en Ligne
 
-Site de petites annonces avec système de paiement pour publication. Conçu spécialement pour le marché nigérien avec prix en **Franc CFA (FCFA)**.
+Site de petites annonces conçu pour le marché nigérien, avec prix en **Franc CFA (FCFA)** et frais de publication indicatifs.
 
 ## 📁 Structure du Projet
 
@@ -42,8 +42,7 @@ marketplace/
 
 #### 2. Créer le projet
 1. Ouvre le dossier `htdocs` de XAMPP (généralement `C:\xampp\htdocs\`)
-2. Crée un nouveau dossier nommé `marketplace`
-3. Place tous les fichiers du projet dans ce dossier selon la structure ci-dessus
+2. Place les fichiers du projet dans `C:\xampp\htdocs\market` (ou utilise le nom de dossier choisi dans l'URL)
 
 #### 3. Créer la base de données
 1. Ouvre phpMyAdmin : http://localhost/phpmyadmin
@@ -85,13 +84,16 @@ chmod 755 uploads/
 ## 🎯 Utilisation
 
 ### Accéder au site
-Ouvre ton navigateur et va sur : **http://localhost/marketplace/**
+Ouvre ton navigateur et va sur : **http://localhost/market/**
 
 ### Compte Administrateur par défaut
 - **Email**: admin@marketplace.com
 - **Mot de passe**: admin123
 
-⚠️ **Important** : Change ce mot de passe après la première connexion !
+⚠️ **Important** : Ces identifiants sont destinés à une installation locale. Change le mot de passe et les identifiants de base de données avant toute mise en ligne.
+
+### Paiement des frais de publication
+Les frais affichés sont calculés automatiquement, mais aucun prestataire de paiement n'est encore connecté. La publication ne débite pas le vendeur et les frais ne sont pas comptabilisés comme des revenus encaissés.
 
 ### Fonctionnalités
 
@@ -107,7 +109,7 @@ Ouvre ton navigateur et va sur : **http://localhost/marketplace/**
 2. **Voir tous les produits** publiés
 3. **Supprimer les contenus inappropriés** (nudité, illicite, etc.)
 4. **Voir les statistiques** (revenus, produits actifs, utilisateurs)
-5. **Gérer les revenus** en temps réel
+5. **Consulter le solde administratif** (les paiements ne sont pas encore connectés)
 
 ### 💰 Tarification de publication (en FCFA)
 
@@ -189,8 +191,8 @@ Le site inclut plusieurs mesures de sécurité :
 - ✅ **Hashage des mots de passe** : bcrypt (PASSWORD_DEFAULT)
 - ✅ **Protection XSS** : htmlspecialchars() sur toutes les entrées
 - ✅ **Validation des données** : Côté client et serveur
-- ✅ **Gestion de sessions sécurisée** : session_start() avec configurations
-- ✅ **Upload sécurisé** : Validation des types de fichiers
+- ✅ **Gestion des sessions** : sessions PHP et renouvellement de l’identifiant à la connexion
+- ✅ **Upload sécurisé** : Contrôle des types MIME et limites de taille côté serveur
 - ✅ **CSRF Protection** : Recommandé d'ajouter des tokens
 
 ### Recommandations supplémentaires
@@ -217,7 +219,7 @@ Le site est entièrement responsive et fonctionne sur :
 - **Galerie** : Affichage dans les détails du produit
 
 ### Vidéos ⭐ NOUVEAU
-- **Formats acceptés** : MP4, AVI, MOV, WebM
+- **Formats acceptés** : MP4, AVI, MOV, WebM (25 Mo maximum par vidéo)
 - **Upload multiple** : Plusieurs vidéos par produit
 - **Prévisualisation** : Avant publication
 - **Lecture** : Contrôles vidéo intégrés
@@ -226,9 +228,9 @@ Le site est entièrement responsive et fonctionne sur :
 ### Configuration Upload
 Modifie les limites dans `php.ini` (XAMPP) :
 ```ini
-upload_max_filesize = 50M
-post_max_size = 50M
-max_file_uploads = 20
+upload_max_filesize = 25M
+post_max_size = 100M
+max_file_uploads = 10
 ```
 
 Redémarre Apache après modification.

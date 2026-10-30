@@ -6,8 +6,9 @@ require_once 'config.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MarketPlace - Achetez et Vendez</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="description" content="Achetez et vendez des produits près de chez vous au Niger avec MarketPlace.">
+    <title>MarketPlace Niger | Achetez et vendez au Niger</title>
+    <link rel="stylesheet" href="css/style.css?v=<?php echo filemtime(__DIR__ . '/css/style.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -29,6 +30,19 @@ require_once 'config.php';
         </div>
     </header>
 
+    <section class="marketplace-intro">
+        <div class="container marketplace-intro-content">
+            <div>
+                <p class="intro-eyebrow">Le commerce local, simplement</p>
+                <h2>Achetez et vendez au Niger</h2>
+                <p>Découvrez des annonces près de chez vous ou donnez une nouvelle vie à vos objets.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal(currentUser ? 'publishModal' : 'signupModal')">
+                <i class="fas fa-plus"></i> Déposer une annonce
+            </button>
+        </div>
+    </section>
+
     <!-- Search Section -->
     <section class="search-section">
         <div class="container">
@@ -43,67 +57,16 @@ require_once 'config.php';
                 <div class="filter-box">
                     <i class="fas fa-filter"></i>
                     <select id="categoryFilter">
-                        <option value="all">🏪 Toutes catégories</option>
-                        <optgroup label="🎮 Électronique & High-Tech">
-                            <option value="smartphones">📱 Smartphones & Tablettes</option>
-                            <option value="ordinateurs">💻 Ordinateurs & Laptops</option>
-                            <option value="tv-audio">📺 TV, Audio & Photo</option>
-                            <option value="accessoires-tech">🎧 Accessoires High-Tech</option>
-                            <option value="jeux-video">🎮 Jeux Vidéo & Consoles</option>
-                        </optgroup>
-                        <optgroup label="👔 Mode & Beauté">
-                            <option value="vetements-hommes">👔 Vêtements Hommes</option>
-                            <option value="vetements-femmes">👗 Vêtements Femmes</option>
-                            <option value="vetements-enfants">👶 Vêtements Enfants</option>
-                            <option value="chaussures">👟 Chaussures</option>
-                            <option value="sacs-accessoires">👜 Sacs & Accessoires</option>
-                            <option value="montres-bijoux">⌚ Montres & Bijoux</option>
-                            <option value="beaute-parfums">💄 Beauté & Parfums</option>
-                        </optgroup>
-                        <optgroup label="🏠 Maison & Jardin">
-                            <option value="meubles">🛋️ Meubles</option>
-                            <option value="electromenager">🔌 Électroménager</option>
-                            <option value="decoration">🖼️ Décoration</option>
-                            <option value="cuisine">🍳 Articles de Cuisine</option>
-                            <option value="jardin">🌱 Jardin & Extérieur</option>
-                            <option value="bricolage">🔨 Bricolage & Outils</option>
-                        </optgroup>
-                        <optgroup label="🚗 Véhicules">
-                            <option value="voitures">🚗 Voitures</option>
-                            <option value="motos">🏍️ Motos & Scooters</option>
-                            <option value="pieces-auto">🔧 Pièces Auto & Moto</option>
-                            <option value="velos">🚲 Vélos</option>
-                        </optgroup>
-                        <optgroup label="📚 Loisirs & Divertissement">
-                            <option value="sport-fitness">⚽ Sport & Fitness</option>
-                            <option value="livres">📚 Livres & Magazines</option>
-                            <option value="musique">🎵 Instruments de Musique</option>
-                            <option value="jouets">🧸 Jouets & Jeux</option>
-                            <option value="collection">🎨 Collection & Art</option>
-                        </optgroup>
-                        <optgroup label="💼 Services & Emploi">
-                            <option value="services-pro">💼 Services Professionnels</option>
-                            <option value="cours">📖 Cours & Formations</option>
-                            <option value="emploi">👔 Offres d'Emploi</option>
-                            <option value="evenements">🎉 Événements</option>
-                        </optgroup>
-                        <optgroup label="🏢 Immobilier">
-                            <option value="appartements">🏢 Appartements</option>
-                            <option value="maisons">🏠 Maisons & Villas</option>
-                            <option value="terrains">🌍 Terrains</option>
-                            <option value="bureaux">🏢 Bureaux & Commerces</option>
-                        </optgroup>
-                        <optgroup label="🐾 Animaux">
-                            <option value="chiens-chats">🐕 Chiens & Chats</option>
-                            <option value="autres-animaux">🐦 Autres Animaux</option>
-                            <option value="accessoires-animaux">🦴 Accessoires pour Animaux</option>
-                        </optgroup>
-                        <optgroup label="📦 Autres">
-                            <option value="alimentation">🍔 Alimentation & Boissons</option>
-                            <option value="bebe-puericulture">👶 Bébé & Puériculture</option>
-                            <option value="sante">⚕️ Santé & Bien-être</option>
-                            <option value="autres">📦 Autres</option>
-                        </optgroup>
+                        <option value="all">Toutes catégories</option>
+                        <?php foreach (getProductCategoryGroups(true) as $group => $categories): ?>
+                            <optgroup label="<?php echo htmlspecialchars($group, ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php foreach ($categories as $value => $label): ?>
+                                    <option value="<?php echo htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
@@ -116,12 +79,18 @@ require_once 'config.php';
     <!-- Products Grid -->
     <main class="main-content">
         <div class="container">
+            <div class="listing-heading">
+                <div>
+                    <p class="intro-eyebrow">À découvrir</p>
+                    <h2>Annonces récentes</h2>
+                </div>
+            </div>
             <div id="productsGrid" class="products-grid">
                 <!-- Produits chargés dynamiquement -->
             </div>
             <div id="noProducts" class="no-products" style="display: none;">
                 <i class="fas fa-exclamation-circle"></i>
-                <p>Aucun produit trouvé</p>
+                <p id="noProductsText">Aucun produit trouvé</p>
             </div>
         </div>
     </main>
@@ -129,7 +98,9 @@ require_once 'config.php';
     <!-- Modal Login -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <button class="close" type="button" aria-label="Fermer la fenêtre de connexion" onclick="closeModal('loginModal')">
+                <i class="fas fa-times"></i><span>Fermer</span>
+            </button>
             <h2><i class="fas fa-sign-in-alt"></i> Connexion</h2>
             <form id="loginForm">
                 <div class="form-group">
@@ -147,7 +118,9 @@ require_once 'config.php';
     <!-- Modal Signup -->
     <div id="signupModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('signupModal')">&times;</span>
+            <button class="close" type="button" aria-label="Fermer la fenêtre d’inscription" onclick="closeModal('signupModal')">
+                <i class="fas fa-times"></i><span>Fermer</span>
+            </button>
             <h2><i class="fas fa-user-plus"></i> Inscription</h2>
             <form id="signupForm">
                 <div class="form-group">
@@ -160,7 +133,7 @@ require_once 'config.php';
                     <input type="tel" id="signupPhone" placeholder="Téléphone" required>
                 </div>
                 <div class="form-group">
-                    <input type="password" id="signupPassword" placeholder="Mot de passe" required>
+                    <input type="password" id="signupPassword" placeholder="Mot de passe (8 caractères minimum)" minlength="8" required>
                 </div>
                 <button type="submit" class="btn btn-primary">S'inscrire</button>
                 <p class="form-footer">Déjà un compte? <a href="#" onclick="switchModal('signupModal', 'loginModal')">Se connecter</a></p>
@@ -171,7 +144,9 @@ require_once 'config.php';
     <!-- Modal Publish Product -->
     <div id="publishModal" class="modal">
         <div class="modal-content modal-large">
-            <span class="close" onclick="closeModal('publishModal')">&times;</span>
+            <button class="close" type="button" aria-label="Fermer la fenêtre de publication" onclick="closeModal('publishModal')">
+                <i class="fas fa-times"></i><span>Fermer</span>
+            </button>
             <h2><i class="fas fa-plus-circle"></i> Publier un produit</h2>
             <form id="publishForm" enctype="multipart/form-data">
                 <div class="form-group">
@@ -182,17 +157,20 @@ require_once 'config.php';
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <input type="number" id="productPrice" placeholder="Prix (GHS)" required>
+                        <input type="number" id="productPrice" placeholder="Prix (FCFA)" min="1" step="1" required>
                     </div>
                     <div class="form-group">
                         <select id="productCategory" required>
                             <option value="">Catégorie</option>
-                            <option value="electronics">Électronique</option>
-                            <option value="fashion">Mode</option>
-                            <option value="home">Maison</option>
-                            <option value="vehicles">Véhicules</option>
-                            <option value="services">Services</option>
-                            <option value="other">Autre</option>
+                            <?php foreach (getProductCategoryGroups() as $group => $categories): ?>
+                                <optgroup label="<?php echo htmlspecialchars($group, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php foreach ($categories as $value => $label): ?>
+                                        <option value="<?php echo htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
@@ -207,16 +185,16 @@ require_once 'config.php';
                 <div class="form-group">
                     <label class="file-upload">
                         <i class="fas fa-cloud-upload-alt"></i>
-                        <span>Télécharger des images</span>
-                        <input type="file" id="productImages" accept="image/*" multiple>
+                        <span>Images (8 maximum, 5 Mo chacune)</span>
+                        <input type="file" id="productImages" accept=".jpg,.jpeg,.png,.gif,.webp" multiple>
                     </label>
                     <div id="imagePreview" class="image-preview"></div>
                 </div>
                 <div class="form-group">
                     <label class="file-upload">
                         <i class="fas fa-video"></i>
-                        <span>Télécharger des vidéos (facultatif)</span>
-                        <input type="file" id="productVideos" accept="video/*" multiple>
+                        <span>Vidéos (2 maximum, 25 Mo chacune)</span>
+                        <input type="file" id="productVideos" accept=".mp4,.webm,.mov,.avi" multiple>
                     </label>
                     <div id="videoPreview" class="video-preview"></div>
                 </div>
@@ -231,13 +209,34 @@ require_once 'config.php';
     <!-- Modal Product Detail -->
     <div id="detailModal" class="modal">
         <div class="modal-content modal-large">
-            <span class="close" onclick="closeModal('detailModal')">&times;</span>
+            <button class="close" type="button" aria-label="Retour aux annonces" onclick="closeModal('detailModal')">
+                <i class="fas fa-arrow-left"></i><span>Retour</span>
+            </button>
             <div id="productDetail">
                 <!-- Détails du produit chargés dynamiquement -->
             </div>
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <div id="messagesModal" class="modal">
+        <div class="modal-content modal-large">
+            <button class="close" type="button" aria-label="Fermer la fenêtre des messages" onclick="closeModal('messagesModal')">
+                <i class="fas fa-times"></i><span>Fermer</span>
+            </button>
+            <h2><i class="fas fa-envelope"></i> Mes messages</h2>
+            <div id="messagesList" class="messages-list" aria-live="polite">
+                <p class="messages-empty">Chargement de vos messages...</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="container">
+            <span>MarketPlace Niger</span>
+            <span>Achetez local. Vendez simplement.</span>
+        </div>
+    </footer>
+
+    <script src="js/app.js?v=<?php echo filemtime(__DIR__ . '/js/app.js'); ?>"></script>
 </body>
 </html>
